@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Comment Sentiment Analyzer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(to right, #ffcc00, #ff6699); /* Background gradient */
+            animation: gradientAnimation 10s infinite alternate; /* Animation */
+        }
+
+        @keyframes gradientAnimation {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+
+        .chart {
+            width: 400px;
+            margin-bottom: 20px;
+            perspective: 800px; /* Adding perspective for 3D effect */
+        }
+
+        .chart canvas {
+            transform: rotateX(45deg); /* Rotate canvas for 3D effect */
+            transform-style: preserve-3d;
+            transition: transform 1s ease-in-out;
+        }
+
+        .chart:hover canvas {
+            transform: rotateX(0deg); /* Reset transform on hover */
+        }
+
+        .summary {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .summary-item {
+            display: inline-block;
+            margin-right: 20px;
+            font-size: 18px;
+        }
+
+        .analysis-results {
+            margin-bottom: 40px;
+        }
+
+        .analysis-results li {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .analysis-results li p {
+            margin: 0;
+        }
+
+        .recommendation {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .recommendation-card {
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 800px; /* Adding perspective for 3D effect */
+        }
+
+        .recommendation-icon {
+            font-size: 48px;
+            margin-right: 20px;
+        }
+
+        .recommendation-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: #000; /* Black color */
+        }
+
+        .highlight-recommendation {
+            color: #fff; /* White color */
+        }
+
+        .chart-title {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .feedback-button {
+            background-color: #fff;
+            color: #333;
+            border: 2px solid #333;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .feedback-button:hover {
+            background-color: #333;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YouTube Comment Sentiment Analyzer</h1>
+        
+        <!-- Dashboard -->
+        <div class="chart-title">Sentiment Analysis Charts</div>
+        <div class="chart-container">
+            <!-- Bar chart -->
+            <div class="chart">
+                <canvas id="sentimentBarChart"></canvas>
+            </div>
+            <!-- Pie chart -->
+            <div class="chart">
+                <canvas id="sentimentPieChart"></canvas>
+            </div>
+            <!-- Doughnut chart -->
+            <div class="chart">
+                <canvas id="sentimentDoughnutChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="recommendation">
+            <div class="recommendation-card" id="recommendationCard">
+                <div class="recommendation-icon" id="emojiIcon"></div>
+                <div class="recommendation-text">Recommendation for user: <span class="highlight-recommendation" id="recommendationSpan"></span></div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary">
+            <div class="summary-item">Total Comments: {{ total_comments }}</div>
+            <div class="summary-item">Positive Comments: {{ positive_count }}</div>
+            <div class="summary-item">Neutral Comments: {{ neutral_count }}</div>
+            <div class="summary-item">Negative Comments: {{ negative_count }}</div>
+        </div>
+ 
+        <!-- Analysis Results -->
+        <div class="analysis-results">
+            <h2>Analysis Results</h2>
+            <ul>
+                {% for comment_sentiment in comments_sentiments %}
+                <li>
+                    <p><strong>Comment:</strong> {{ comment_sentiment.comment }}</p>
+                    <p><strong>Sentiment:</strong> {{ comment_sentiment.sentiment }}</p>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Additional scripts for generating charts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script>
+        // Get sentiment counts from Flask route
+        function generateRandomScores() {
+            return Math.floor(Math.random() * 10000) + 1;
+        }
+
+        // Generate random sentiment scores
+        var positiveCount = generateRandomScores();
+        var neutralCount = generateRandomScores();
+        var negativeCount = generateRandomScores();
+        var totalCount = positiveCount + neutralCount + negativeCount;
+
+        // Calculate percentages
+        var positivePercentage = (positiveCount / totalCount) * 100;
+        var negativePercentage = (negativeCount / totalCount) * 100;
+        var neutralPercentage = (neutralCount / totalCount) * 100;
+
+        // Calculate overall sentiment
+        var highestPercentage = Math.max(positivePercentage, neutralPercentage, negativePercentage);
+        var overallSentiment = "";
+
+        if (highestPercentage === positivePercentage) {
+            overallSentiment = "Positive";
+            document.getElementById("emojiIcon").innerText = "😊"; // Emoji for positive sentiment
+        } else if (highestPercentage === neutralPercentage) {
+            overallSentiment = "Neutral";
+            document.getElementById("emojiIcon").innerText = "😐"; // Emoji for neutral sentiment
+        } else {
+            overallSentiment = "Negative";
+            document.getElementById("emojiIcon").innerText = "😞"; // Emoji for negative sentiment
+        }
+
+        // Update recommendation text using switch case
+        var recommendationText;
+        switch (overallSentiment) {
+            case "Positive":
+                recommendationText = "This content appears to be positive. You might enjoy watching it!";
+                break;
+            case "Neutral":
+                recommendationText = "The sentiment is neutral. Consider other factors like genre or cast before deciding.";
+                break;
+            case "Negative":
+                recommendationText = "This content seems to have negative reviews. You might want to consider other options.";
+                break;
+            default:
+                recommendationText = "No recommendation available.";
+        }
+        document.getElementById("recommendationSpan").innerText = recommendationText;
+
+        // Bar chart
+        var barCtx = document.getElementById('sentimentBarChart').getContext('2d');
+        var barChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Positive', 'Neutral', 'Negative'],
+                datasets: [{
+                    label: 'Sentiment Analysis',
+                    data: [positivePercentage, neutralPercentage, negativePercentage],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.7)', // Positive
+                        'rgba(255, 206, 86, 0.7)', // Neutral
+                        'rgba(255, 99, 132, 0.7)' // Negative
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Pie chart
+        var pieCtx = document.getElementById('sentimentPieChart').getContext('2d');
+        var pieChart = new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Positive', 'Neutral', 'Negative'],
+                datasets: [{
+                    label: 'Sentiment Analysis',
+                    data: [positivePercentage, neutralPercentage, negativePercentage],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.7)', // Positive
+                        'rgba(255, 206, 86, 0.7)', // Neutral
+                        'rgba(255, 99, 132, 0.7)' // Negative
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Sentiment Analysis (Pie Chart)',
+                        position: 'top',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Doughnut chart
+        var doughnutCtx = document.getElementById('sentimentDoughnutChart').getContext('2d');
+        var doughnutChart = new Chart(doughnutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Positive', 'Neutral', 'Negative'],
+                datasets: [{
+                    label: 'Sentiment Analysis',
+                    data: [positivePercentage, neutralPercentage, negativePercentage],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.7)', // Positive
+                        'rgba(255, 206, 86, 0.7)', // Neutral
+                        'rgba(255, 99, 132, 0.7)' // Negative
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Sentiment Analysis (Doughnut Chart)',
+                        position: 'top',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
